@@ -1,0 +1,75 @@
+pipeline {
+    agent any
+    
+    environment {
+        MAIN_FILE = 'main_file.txt'
+        GIT_CREDENTIALS_ID = 'jenkinsKey'
+        GIT_URL = 'git@github.com:shaiknadeem95/project1.git'
+        GIT_BRANCH = 'master'
+    }
+
+    stages {
+        stage('Clone repository') {
+            steps {
+                script {
+                    def cloneSuccess = git branch: 'master',credentialsId: GIT_CREDENTIALS_ID, url: GIT_URL
+                    if (cloneSuccess) {
+                        echo 'Git clone successful'
+                    } else {
+                        error 'Git clone failed'
+                    }
+                }
+            }
+        }
+        
+        stage('Print files before update') {
+            steps {
+                script {
+                    echo "Printing wor spcae"
+                    echo "$pwd"
+                    echo "$WORKSPACE"
+                    sh 'ls -la $WORKSPACE' // Print list of files in the workspace directory
+                }
+            }
+        }
+        
+        stage('Update files') {
+            steps {
+                script {
+                    def mainFileLines = readFile(MAIN_FILE).readLines()
+                    mainFileLines.each { line ->
+                        line = line.trim()
+                        if (!line.isEmpty()) {
+                            def otherFiles = ['other_file1.txt']
+                            otherFiles.each { filePath ->
+                                if (!fileContains(filePath, line)) {
+                                    writeFile file: filePath, text: "${line}\n", append: true
+                                    echo "Added line '${line}' to ${filePath}"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        stage('Commit and push') {
+            steps {
+                script {
+                    //sh 'touch hello2.txt'
+                    sh 'ls -ltr'
+                    sh 'git config --global user.email "shaiknadeem98@gmail.com"'
+                    sh 'git config --global user.name "shaiknadeem95"'
+                    sh 'git add .'
+                    sh 'git commit -m "Update files based on pull request"'
+                    sh 'git remote set-url --push origin "git@github.com:shaiknadeem95/project1.git"'
+                    sh 'git push --set-upstream origin master'
+                }
+            }
+        }
+    }
+}
+
+def fileContains(String filePath, String content) {
+    return readFile(filePath).trim().contains(content)
+}
